@@ -58,10 +58,12 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     PlanoDeDibujo Miplano;
 
     private boolean PrimerPunto = true, SegundoPunto = true;
-    private int FiguraSeleccionada, ColorSeleccionado;
+    private int FiguraSeleccionada, Contorno = 10;
     private Point Ini, Fin;
+
     // Definición de variables para los rectángulos
-    private Rect SelectionLine, SelectionCircle, SelectionSquare, SelectionRect, SelectionOval;
+    private Rect SelectionLine, SelectionCircle, SelectionSquare, SelectionRect, SelectionOval, SelectionPol;
+    private Rect SelectionPlus, SelectionMinus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +83,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         SelectionSquare = new Rect(400, 0, 600, 200);
         SelectionRect = new Rect(600, 0, 800, 200);
         SelectionOval = new Rect(800, 0, 1000, 200);
+        SelectionPol = new Rect(1000, 0, 1200, 200);
+
+        SelectionPlus = new Rect(0, 200, 200, 400);
+        SelectionMinus = new Rect(200, 200, 400, 400);
     }
 
     //Funcion para poder hacer Touch dentro de nuestro canvas.
@@ -119,6 +125,20 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 if((Posx > 800)&&(Posx < 1000) && (Posy > 0)&&(Posy < 200)){
                     FiguraSeleccionada = 5;
                     Toast.makeText(this, "Elipse sel", Toast.LENGTH_SHORT).show();
+                    break;
+                }
+
+                // Seleccionar Mas
+                if((Posx > 0)&&(Posx < 200) && (Posy > 200)&&(Posy < 400)){
+                    FiguraSeleccionada = 6;
+                    Toast.makeText(this, "Mas", Toast.LENGTH_SHORT).show();
+                    break;
+                }
+
+                // Seleccionar Menos
+                if((Posx > 200)&&(Posx < 400) && (Posy > 200)&&(Posy < 400)){
+                    FiguraSeleccionada = 7;
+                    Toast.makeText(this, "Menos", Toast.LENGTH_SHORT).show();
                     break;
                 }
 
@@ -165,7 +185,8 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
             // Se pinta la línea o fígura que realiza el usuario
 
-            paint.setStrokeWidth(10);
+            paint.setStrokeWidth(Contorno);
+            paint.setStyle(Paint.Style.STROKE);
             paint.setARGB(255, 255 ,0 ,0);
 
             if (SegundoPunto){
@@ -220,6 +241,13 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         else if ((Fin.x > Ini.x) && (Fin.y < Ini.y))
                             canvas.drawOval(Ini.x , Ini.y - difY , Ini.x + difX, Ini.y , paint);
                         break;
+                    case 6:
+                        Contorno += 1;
+                        break;
+                    case 7:
+                        if (Contorno != 0)
+                            Contorno -= 1;
+
                 }
             }
 
@@ -271,6 +299,26 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             PincelIcono.setStyle(Paint.Style.STROKE);
             PincelIcono.setARGB(255,255,255,255);
             canvas.drawOval(840, 60, 960, 140, PincelIcono);
+
+            //Botón para seleccionar más
+            // Rectángulo
+            PincelRect.setARGB(255, 255, 0, 0);
+            canvas.drawRect(SelectionPlus, PincelRect);
+            // Plus
+            PincelIcono.setStrokeWidth(15);
+            PincelIcono.setARGB(255,255,255,255);
+            canvas.drawLine(50, 300, 150, 300, PincelIcono);
+            canvas.drawLine(100, 250, 100, 350, PincelIcono);
+
+            //Botón para seleccionar menos
+            // Rectángulo
+            PincelRect.setARGB(255, 0, 0, 255);
+            canvas.drawRect(SelectionMinus, PincelRect);
+            // Minus
+            PincelIcono.setStrokeWidth(15);
+            PincelIcono.setStyle(Paint.Style.STROKE);
+            PincelIcono.setARGB(255,255,255,255);
+            canvas.drawLine(250, 300, 350, 300, PincelIcono);
 
         }
     }

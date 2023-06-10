@@ -5,7 +5,14 @@ import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import android.graphics.Path;
+
+
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
@@ -15,25 +22,35 @@ import android.view.View;
 import android.widget.RelativeLayout;
 import android.graphics.Point;
 import android.widget.Toast;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Random;
 
 
 // --------------------------------------------------------
 //Clase Figuras, define como sera cada una de estas
 class Figuras{
     //Atributos
-    private int TipoFigura, Color, Contorno;
+    private int TipoFigura, Color, Lados;
     private Point Ini, Fin;
+    private float Contorno;
 
     //Atributos by default.
     Figuras(){
         TipoFigura = 0;
-        Color = 0;
+        Color = 1;
         Ini = null;
         Fin = null;
         Contorno = 10;
+        Lados = 0;
     }
 
     //Metodos, simplemente para darles el valor de cada uno de sus atributos.
@@ -42,13 +59,15 @@ class Figuras{
     public void setColor(int color){ Color = color; }
     public void setIni(Point aux){ Ini = aux;}
     public void setFin(Point aux){ Fin = aux;}
-    public void setContorno(int contorno){Contorno = contorno;}
+    public void setContorno(float contorno){Contorno = contorno;}
+    public void setLados(int lados){Lados = lados;}
     //Metodos para recibir valor.
     public Point getIni(){ return Ini;}
     public Point getFin(){ return Fin;}
     public int getTipoFigura(){return TipoFigura;}
     public int getColor(){return Color;}
-    public int getContorno(){return Contorno;}
+    public float getContorno(){return Contorno;}
+    public int getLados(){return Lados;}
 }
 
 
@@ -60,15 +79,24 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     //Variables que usaremos en nuestro programa
     private RelativeLayout layout;
     private PlanoDeDibujo Miplano;
-    private boolean PrimerPunto = true, SegundoPunto = true, guardar = false, cargar = false;
-    private int FiguraSeleccionada, Contorno = 10, ColorSeleccionado;
+    private boolean PrimerPunto = true, SegundoPunto = true;
+    private int FiguraSeleccionada, ColorSeleccionado = 1, lados;
+    private float Contorno = 10;
     private Point Ini, Fin;
     private ArrayList<Figuras> Lista;
+    private int[][] Color = {{0, 0, 0}, // NEGRO
+            {222, 49, 99}, //ROJO
+            {159, 226, 191}, // VERDE
+            {100, 149, 237}, // AZUL
+            {223, 255, 0}, //AMARILLO
+            {64, 224, 208}, //CYAN
+            {204, 204, 255}}; // MAGENTA
     // Definición de variables para los rectángulos
     private Rect SelectionLine, SelectionCircle, SelectionSquare, SelectionRect, SelectionOval, SelectionPol,
-            SelectionClear, SelectionSave, SelectionOpen;
+            SelectionClear, SelectionSave, SelectionOpen, SelectionColor;
     private Rect SelectionPlus, SelectionMinus;
 
+    private Random random = new Random();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,6 +124,8 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
         SelectionSave = new Rect(1240, 2110, 1440, 2310);
         SelectionOpen = new Rect(1040, 2110, 1240, 2310);
+
+        SelectionColor = new Rect(400, 2110, 1040, 2310);
         // ARREGLO PARA FIGURAS
         Lista = new ArrayList<>();
     }
@@ -136,13 +166,13 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                 if((Posx > 800)&&(Posx < 1000) && (Posy > 0)&&(Posy < 200)){
                     FiguraSeleccionada = 5;
                     Toast.makeText(this, "Elipse sel", Toast.LENGTH_SHORT).show();
-                    Lista.clear();
                     break;
                 }
                 // Seleccionar Polígono
                 if((Posx > 1000)&&(Posx < 1200) && (Posy > 0)&&(Posy < 200)){
-                    FiguraSeleccionada = 8;
+                    FiguraSeleccionada = 6;
                     Toast.makeText(this, "Polígono sel", Toast.LENGTH_SHORT).show();
+                    lados = random.nextInt(11) + 3; // número de lados del polígono
                     break;
                 }
                 // Seleccionar Limpiar
@@ -152,30 +182,109 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                     break;
                 }
                 // Seleccionar Mas
-                if((Posx > 0)&&(Posx < 200) && (Posy > 200)&&(Posy < 400)){
-                    FiguraSeleccionada = 6;
-                    // Toast.makeText(this, "Mas", Toast.LENGTH_SHORT).show();
+                if((Posx > 0)&&(Posx < 200) && (Posy > 2110)&&(Posy < 2310)){
+                    if(Contorno < 50)
+                        Contorno += 5;
+                    Toast.makeText(this, "Mas", Toast.LENGTH_SHORT).show();
                     break;
                 }
                 // Seleccionar Menos
-                if((Posx > 200)&&(Posx < 400) && (Posy > 200)&&(Posy < 400)){
-                    FiguraSeleccionada = 7;
-                    // Toast.makeText(this, "Menos", Toast.LENGTH_SHORT).show();
+                if((Posx > 200)&&(Posx < 400) && (Posy > 2110)&&(Posy < 2310)){
+                    if (Contorno != 0)
+                        Contorno -= 5;
+                    Toast.makeText(this, "Menos", Toast.LENGTH_SHORT).show();
                     break;
                 }
-                SelectionSave = new Rect(1240, 2110, 1440, 2310);
-                SelectionOpen = new Rect(1040, 2110, 1240, 2310);
                 // Seleccionar Guardar
                 if((Posx > 1240)&&(Posx < 1440) && (Posy > 2110)&&(Posy < 2310)){
-                    FiguraSeleccionada = 7;
-                    guardar = true;
-                    Toast.makeText(this, "Guardar canvas", Toast.LENGTH_SHORT).show();
+                    // PREPARAR EL ARCHIVO PARA AESCRITURA DE DATOS STRING
+                    try{
+                        String Aux;
+                        FileOutputStream ArchivoSalida = openFileOutput("canva.txt", MODE_PRIVATE);
+                        OutputStreamWriter TextoSalida = new OutputStreamWriter(ArchivoSalida);
+                        for(int k = 0; k < Lista.size(); k++){
+                            // GUARDAR TIPO DE FIGURA
+                            Aux = (Lista.get(k).getTipoFigura()) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getIni().x) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getIni().y) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getFin().x) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getFin().y) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getColor()) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getContorno()) + "\n";
+                            TextoSalida.write(Aux);
+                            Aux = (Lista.get(k).getLados()) + "\n";
+                            TextoSalida.write(Aux);
+                        }
+                        TextoSalida.close();
+                        ArchivoSalida.close();
+                        Toast.makeText(this, "Canvas guardado correctamente", Toast.LENGTH_SHORT).show();
+                    }catch(Exception caso){
+                        Toast.makeText(this, "ERROR:canvas no guardado", Toast.LENGTH_SHORT).show();
+                        caso.printStackTrace();
+                    }
                     break;
                 }
                 // Seleccionar Cargar
                 if((Posx > 1040)&&(Posx < 1240) && (Posy > 2110)&&(Posy < 2310)){
-                    cargar = true;
-                    Toast.makeText(this, "Cargar canvas", Toast.LENGTH_SHORT).show();
+                    try{
+                        Lista.clear();
+                        // PREPARAR EL ARCHIVO PARA LA LECTURA POR LÍNEA
+                        FileInputStream ArchivoEntrada = openFileInput("canva.txt");
+                        InputStreamReader TextoEntrada = new InputStreamReader(ArchivoEntrada);
+                        BufferedReader LineaDeTextoDeEntrada = new BufferedReader(TextoEntrada);
+                        // LEER LAS LÍNEAS DE TEXTO DENTRO DEL ARCHIVO
+                        String linea = "", linea_ = "";
+                        // LEER TODAS LAS LÍNEAS DE TEXTO
+                        linea = LineaDeTextoDeEntrada.readLine(); // TIPO FIGURA
+                        while(linea != null){
+                            Figuras Fig = new Figuras();
+                            Fig.setTipoFigura(Integer.parseInt(linea));
+                            linea = LineaDeTextoDeEntrada.readLine();
+                            linea_ = LineaDeTextoDeEntrada.readLine();
+                            Point auxIni = new Point(Integer.parseInt(linea), Integer.parseInt(linea_));
+                            Fig.setIni(auxIni);
+                            linea = LineaDeTextoDeEntrada.readLine();
+                            linea_ = LineaDeTextoDeEntrada.readLine();
+                            Point auxFin = new Point(Integer.parseInt(linea), Integer.parseInt(linea_));
+                            Fig.setFin(auxFin);
+                            linea = LineaDeTextoDeEntrada.readLine(); // COLOR
+                            Fig.setColor(Integer.parseInt(linea));
+                            linea = LineaDeTextoDeEntrada.readLine(); // CONTORNO
+                            Fig.setContorno(Float.parseFloat(linea));
+                            linea = LineaDeTextoDeEntrada.readLine(); // COLOR
+                            Fig.setLados(Integer.parseInt(linea));
+                            //System.out.println("Tipo:"+Fig.getTipoFigura());
+                            //System.out.println("Ini:"+Fig.getIni().x+","+Fig.getIni().y);
+                            //System.out.println("Fin:"+Fig.getFin().x+","+Fig.getFin().y);
+                            //System.out.println("Color: "+Fig.getColor());
+                            //System.out.println("Contorno: "+Fig.getContorno());
+                            Lista.add(Fig);
+                            linea = LineaDeTextoDeEntrada.readLine(); // TIPO FIGURA
+                        }
+                        // CERRAR LOS FLUJOS UTILIZADOS
+                        TextoEntrada.close();
+                        ArchivoEntrada.close();
+                        Toast.makeText(this, "Canvas cargado correctamente", Toast.LENGTH_SHORT).show();
+                        // System.out.println("Total de figuras cargadas: "+Lista.size());
+                    }
+                    catch(Exception caso){
+                        Toast.makeText(this, "ERROR:canvas no cargado", Toast.LENGTH_SHORT).show();
+                        caso.printStackTrace();
+                    }
+                    break;
+                }
+                // Seleccionar Color
+                if((Posx > 400)&&(Posx < 1240) && (Posy > 2110)&&(Posy < 2310)){
+                    ColorSeleccionado+=1;
+                    if(ColorSeleccionado > 7)
+                        ColorSeleccionado=1;
+                    Toast.makeText(this, "Cambiar color", Toast.LENGTH_SHORT).show();
                     break;
                 }
                 // Inicio de la figura o línea
@@ -203,6 +312,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                     Point PuntoFinal = new Point(Fin.x, Fin.y);
                     Fig.setFin(PuntoFinal);
                     Fig.setContorno(Contorno);
+                    Fig.setLados(lados);
                     Lista.add(Fig);
                     Contorno = 10;
                     System.out.println(Lista.size());
@@ -217,9 +327,6 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
     //Plano en donde dibujaremos, y le decimos de que color, anchura y de donde a donde
     //Sera nuestra raya.
-    public void saveMap(View view){
-
-    }
     class PlanoDeDibujo extends View {
         public PlanoDeDibujo(Context context){
             super(context);
@@ -237,16 +344,32 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             // Se pinta la línea o fígura que realiza el usuario
             paint.setStrokeWidth(Contorno);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setARGB(255, 255 ,0 ,0);
             // MOSTRAR FIGURA EN PROGRESO DE DIBUJADO
+            switch(ColorSeleccionado){
+                case 1: paint.setARGB(255, Color[0][0], Color[0][1], Color[0][2]);
+                    PincelRect.setARGB(255, Color[0][0], Color[0][1], Color[0][2]);
+                    break;
+                case 2: paint.setARGB(255, Color[1][0], Color[1][1], Color[1][2]);
+                    PincelRect.setARGB(255, Color[1][0], Color[1][1], Color[1][2]);
+                    break;
+                case 3: paint.setARGB(255, Color[2][0], Color[2][1], Color[2][2]);
+                    PincelRect.setARGB(255, Color[2][0], Color[2][1], Color[2][2]);
+                    break;
+                case 4: paint.setARGB(255, Color[3][0], Color[3][1], Color[3][2]);
+                    PincelRect.setARGB(255, Color[3][0], Color[3][1], Color[3][2]);
+                    break;
+                case 5: paint.setARGB(255, Color[4][0], Color[4][1], Color[4][2]);
+                    PincelRect.setARGB(255, Color[4][0], Color[4][1], Color[4][2]);
+                    break;
+                case 6: paint.setARGB(255, Color[5][0], Color[5][1], Color[5][2]);
+                    PincelRect.setARGB(255, Color[5][0], Color[5][1], Color[5][2]);
+                    break;
+                case 7: paint.setARGB(255, Color[6][0], Color[6][1], Color[6][2]);
+                    PincelRect.setARGB(255, Color[6][0], Color[6][1], Color[6][2]);
+                    break;
+            }
+            canvas.drawRect(SelectionColor, PincelRect);
             if (SegundoPunto){
-                switch(ColorSeleccionado){
-                    case 1: paint.setARGB(255, 255, 0, 0);
-                        break;
-                    case 2: paint.setARGB(255, 0, 255, 0);
-                        break;
-                }
-
                 switch(FiguraSeleccionada){
                     // Se selecciona la línea como figura
                     case 1:
@@ -298,30 +421,58 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             canvas.drawOval(Ini.x , Ini.y - difY , Ini.x + difX, Ini.y , paint);
                         break;
                     case 6:
-                        Contorno += 1;
+                        // Dibujar el polígono
+                        difX = Fin.x - Ini.x;
+                        difY = Fin.y - Ini.y;
+                        radio = (float) sqrt((difX*difX) + (difY*difY));
+                        // Define las coordenadas de los vértices del polígono
+                        Path path = new Path();
+                        float angulo = (float) (2 * Math.PI / lados);
+                        float startingAngle = (float) (Math.PI / 2); // 90 grados (12 en punto en un reloj)
+                        for (int i = 0; i < lados; i++) {
+                            float x = (float) (Ini.x + radio * Math.cos(startingAngle + i * angulo));
+                            float y = (float) (Ini.y + radio * Math.sin(startingAngle + i * angulo));
+                            if (i == 0) {
+                                path.moveTo(x, y);
+                            } else {
+                                path.lineTo(x, y);
+                            }
+                        }
+                        path.close(); // Cierra el path (une el último vértice con el primero)
+                        // Dibuja el polígono en el canvas
+                        canvas.drawPath(path, paint);
                         break;
-                    case 7:
-                        if (Contorno != 0)
-                            Contorno -= 1;
-
                 }
             }
-
-            // IMPRIMIR LAS FIGURAS EN LA LISTA Y SU TIPO
             for(int k = 0; k < Lista.size(); k++){
-                System.out.println("Figura"+k+": "+Lista.get(k).getTipoFigura());
+                System.out.println("Tipo:"+Lista.get(k).getTipoFigura());
+                System.out.println("Ini:"+Lista.get(k).getIni().x+","+Lista.get(k).getIni().y);
+                System.out.println("Fin:"+Lista.get(k).getFin().x+","+Lista.get(k).getFin().y);
+                System.out.println("Color: "+Lista.get(k).getColor());
+                System.out.println("Contorno: "+Lista.get(k).getContorno());
+                System.out.println("Lados: "+Lista.get(k).getLados());
             }
             // MOSTRAR LAS FIGURAS EN EL CANVA
             for(int k = 0; k < Lista.size(); k++){
-                // CAMBIAR DE Contorno
-                paint.setStrokeWidth(Lista.get(k).getContorno());
-                // CAMBIAR DE COLOR EL PINCEL
+                // CAMBIR DEAR DE COLOR EL PINCEL
                 switch(Lista.get(k).getColor()){
-                    case 1: paint.setARGB(255, 255, 0, 0);
+                    case 1: paint.setARGB(255, Color[0][0], Color[0][1], Color[0][2]);
                         break;
-                    case 2: paint.setARGB(255, 0, 255, 0);
+                    case 2: paint.setARGB(255, Color[1][0], Color[1][1], Color[1][2]);
+                        break;
+                    case 3: paint.setARGB(255, Color[2][0], Color[2][1], Color[2][2]);
+                        break;
+                    case 4: paint.setARGB(255, Color[3][0], Color[3][1], Color[3][2]);
+                        break;
+                    case 5: paint.setARGB(255, Color[4][0], Color[4][1], Color[4][2]);
+                        break;
+                    case 6: paint.setARGB(255, Color[5][0], Color[5][1], Color[5][2]);
+                        break;
+                    case 7: paint.setARGB(255, Color[6][0], Color[6][1], Color[6][2]);
                         break;
                 }
+                // CAMBIA Contorno
+                paint.setStrokeWidth(Lista.get(k).getContorno());
                 switch(Lista.get(k).getTipoFigura()){
                     // Se selecciona la línea como figura
                     case 1:
@@ -373,50 +524,28 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             canvas.drawOval(Lista.get(k).getIni().x , Lista.get(k).getIni().y - difY , Lista.get(k).getIni().x + difX, Lista.get(k).getIni().y , paint);
                         break;
                     case 6:
-                        Contorno += 1;
+                        // Dibujar el polígono
+                        difX = Lista.get(k).getFin().x - Lista.get(k).getIni().x;
+                        difY = Lista.get(k).getFin().y - Lista.get(k).getIni().y;
+                        radio = (float) sqrt((difX*difX) + (difY*difY));
+                        // Define las coordenadas de los vértices del polígono
+                        Path path = new Path();
+                        float angulo = (float) (2 * Math.PI / Lista.get(k).getLados());
+                        float startingAngle = (float) (Math.PI / 2); // 90 grados (12 en punto en un reloj)
+                        for (int i = 0; i < Lista.get(k).getLados(); i++) {
+                            float x = (float) (Lista.get(k).getIni().x + radio * Math.cos(startingAngle + i * angulo));
+                            float y = (float) (Lista.get(k).getIni().y + radio * Math.sin(startingAngle + i * angulo));
+                            if (i == 0) {
+                                path.moveTo(x, y);
+                            } else {
+                                path.lineTo(x, y);
+                            }
+                        }
+                        path.close(); // Cierra el path (une el último vértice con el primero)
+                        // Dibuja el polígono en el canvas
+                        canvas.drawPath(path, paint);
                         break;
-                    case 7:
-                        if (Contorno != 0)
-                            Contorno -= 1;
                 }
-            }
-
-            if(guardar){
-                /*File file = new File(Environment.getExternalStorageDirectory(), "canvas.txt");
-                try {
-                    // Abrir un flujo de escritura en el archivo
-                    FileWriter writer = new FileWriter(file);
-
-                    // Escribir el texto del canvas en el archivo
-                    writer.write(textoCanvas);
-
-                    // Cerrar el flujo de escritura
-                    writer.close();
-
-                    Toast.makeText(getApplicationContext(), "Canvas guardado como texto", Toast.LENGTH_SHORT).show();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), "Error al guardar el canvas", Toast.LENGTH_SHORT).show();
-                }*/
-                try{
-                    // PREPARAR EL ARCHIVO PARA AESCRITURA DE DATOS STRING
-                    FileOutputStream ArchivoSalida = openFileOutput( "canvas.txt", MODE_PRIVATE);
-                    OutputStreamWriter TextoSalida = new OutputStreamWriter(ArchivoSalida);
-                    // PUEDEN ESCRIBIRSE CADENAS MEDIANTE EL MÉTODO WRITE()
-                    String textoCanvas = canvas.toString();
-                    TextoSalida.write(textoCanvas);
-                    // CERRAR LOS FLUJOS UTILIZADOS
-                    TextoSalida.close();
-                    ArchivoSalida.close();
-                }
-                catch(Exception caso){
-                    caso.printStackTrace();
-                }
-                guardar = false;
-            }
-            if(cargar){
-
-                cargar = false;
             }
 
             // Botón para seleccionar linea
@@ -528,6 +657,39 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             PincelIcono.setStyle(Paint.Style.STROKE);
             PincelIcono.setARGB(255,255,255,255);
             // canvas.drawLine(250, 2210, 350, 2210, PincelIcono);
+
+            // Poligono Icono
+            PincelIcono.setStrokeWidth(15);
+            PincelIcono.setStyle(Paint.Style.STROKE);
+            PincelIcono.setARGB(255,255,255,255);
+
+            int radio = 50;
+
+            // Define las coordenadas de los vértices del polígono
+            int centerX = 1100;
+            int centerY = 100;
+
+            int l = 5;
+
+            Path path = new Path();
+            float angulo = (float) (2 * Math.PI / l);
+            float startingAngle = (float) (Math.PI / 2);
+
+            for (int i = 0; i < l; i++) {
+                float x = (float) (centerX + radio * Math.cos(startingAngle + i * angulo));
+                float y = (float) (centerY + radio * Math.sin(startingAngle + i * angulo));
+
+                if (i == 0) {
+                    path.moveTo(x, y);
+                } else {
+                    path.lineTo(x, y);
+                }
+            }
+
+            path.close(); // Cierra el path (une el último vértice con el primero)
+
+            // Dibuja el polígono en el canvas
+            canvas.drawPath(path, PincelIcono);
 
         }
     }
